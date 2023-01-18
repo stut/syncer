@@ -12,23 +12,27 @@ All configuration is done using environment variables.
 
 ### `SYNCER_SOURCE`
 
-The git@ URL of the repo to clone.
+The `git@` URL of the repo to clone.
+
+Default: _none, must be specified_
 
 ### `SYNCER_DEST`
 
 The destination directory. This will be created if it doesn't exist.
 
+Default: _none, must be specified_
+
 ### `SYNCER_UPDATE_INTERVAL`
 
 The update interval specified in [Go's time.Duration format](https://pkg.go.dev/time#ParseDuration), e.g. "1h", "30s", "12h", etc.
 
-Default: "1h"
+Default: `"1h"`
 
 ### `SYNCER_GIT_UPSTREAM`
 
 The name of the upstream from which to pull.
 
-Default: "origin"
+Default: `"origin"`
 
 ### `SYNCER_SSH_KEY_FILENAME`
 
