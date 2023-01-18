@@ -38,7 +38,11 @@ Default: `"origin"`
 
 Private SSH key to use when accessing the remote git repository.
 
+Default: _not used_
+
 ### `SYNCER_SSH_KEY_PASSWORD`
 
 The SSH key password.
+
+Default: _not used_
 
