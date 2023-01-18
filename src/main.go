@@ -57,6 +57,7 @@ func main() {
 	log.Printf("              Dest = %s\n", config.Dest)
 	log.Printf("   Update interval = %s\n", config.UpdateInterval.String())
 	if config.Type == "git" {
+		log.Printf("      Git upstream = %s\n", config.GitUpstream)
 		log.Printf("  SSH key filename = %s\n", config.SshKeyFilename)
 	}
 
