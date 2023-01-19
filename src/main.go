@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	VERSION = "v2"
+	VERSION = "v4"
 )
 
 func envString(name string, def string) string {
