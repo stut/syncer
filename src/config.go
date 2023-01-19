@@ -6,6 +6,20 @@ import (
 	"time"
 )
 
+type SyncerConfig struct {
+	Type           string
+	Dest           string
+	Source         string
+	UpdateInterval time.Duration
+
+	// Git
+	GitBranch         string
+	GitUpstream       string
+	GitResetOnChange  bool
+	GitSshKeyFilename string
+	GitSshKeyPassword string
+}
+
 func initSyncerConfig() (*SyncerConfig, error) {
 	var err error
 
@@ -15,11 +29,11 @@ func initSyncerConfig() (*SyncerConfig, error) {
 	}
 
 	res := &SyncerConfig{
-		Type:           determineSourceType(source),
-		Source:         source,
-		Dest:           envString("SYNCER_DEST", ""),
-		UpdateInterval: 0,
-		SshKeyFilename: envString("SYNCER_SSH_KEY_FILENAME", ""),
+		Type:              determineSourceType(source),
+		Source:            source,
+		Dest:              envString("SYNCER_DEST", ""),
+		UpdateInterval:    0,
+		GitSshKeyFilename: envString("SYNCER_SSH_KEY_FILENAME", ""),
 	}
 
 	if len(res.Dest) == 0 {

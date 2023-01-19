@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
 	"log"
 	"os"
@@ -14,18 +15,32 @@ import (
 	"github.com/mitchellh/go-homedir"
 )
 
+func gitConfig(config *SyncerConfig) error {
+	var err error
+
+	config.GitBranch = envString("SYNCER_GIT_BRANCH", "main")
+	config.GitUpstream = envString("SYNCER_GIT_UPSTREAM", "origin")
+	config.GitResetOnChange = envBool("SYNCER_GIT_RESET_ON_CHANGES", true)
+
+	config.GitSshKeyFilename, err = homedir.Expand(config.GitSshKeyFilename)
+	if err != nil {
+		return fmt.Errorf("cannot perform homedir expansion on the SSH key filename: %s", config.GitSshKeyFilename)
+	}
+	if _, err := os.Stat(config.GitSshKeyFilename); errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("SSH key filename does not exist: %s", config.GitSshKeyFilename)
+	}
+	config.GitSshKeyPassword = envString("SYNCER_SSH_KEY_PASSWORD", "")
+
+	return nil
+}
+
 func gitInit(config *SyncerConfig) error {
 	var err error
-	config.SshKeyFilename, err = homedir.Expand(config.SshKeyFilename)
-	if err != nil {
-		return fmt.Errorf("cannot perform homedir expansion on the SSH key filename: %s", config.SshKeyFilename)
-	}
-	if _, err := os.Stat(config.SshKeyFilename); errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("SSH key filename does not exist: %s", config.SshKeyFilename)
-	}
 
-	config.SshKeyPassword = envString("SYNCER_SSH_KEY_PASSWORD", "")
-	config.GitUpstream = envString("SYNCER_GIT_UPSTREAM", "origin")
+	err = initCommon(config)
+	if err != nil {
+		return err
+	}
 
 	isEmpty := false
 	isEmpty, err = dirIsEmpty(config.Dest)
@@ -49,16 +64,18 @@ func gitInit(config *SyncerConfig) error {
 
 	log.Printf("Performing initial clone...")
 	cloneOptions := &git.CloneOptions{
-		URL:          config.Source,
-		Auth:         publicKeys,
-		Progress:     os.Stdout,
-		SingleBranch: true,
-		Depth:        1,
+		URL:           config.Source,
+		Auth:          publicKeys,
+		Progress:      log.Writer(),
+		SingleBranch:  true,
+		Depth:         1,
+		ReferenceName: plumbing.NewBranchReferenceName(config.GitBranch),
 	}
 	_, err = git.PlainClone(config.Dest, false, cloneOptions)
 	if err != nil {
 		return fmt.Errorf("failed to perform initial clone: %s", err)
 	}
+
 	return nil
 }
 
@@ -66,6 +83,10 @@ func gitUpdate(config *SyncerConfig) error {
 	// We instantiate a new repository targeting the given path (the .git folder)
 	r, err := git.PlainOpen(config.Dest)
 	if err != nil {
+		if err.Error() == "repository does not exist" {
+			log.Printf("  Repository does not exist, attempting reinitialisation...")
+			return gitInit(config)
+		}
 		return fmt.Errorf("failed to open repo: %s", err)
 	}
 
@@ -75,6 +96,18 @@ func gitUpdate(config *SyncerConfig) error {
 		return fmt.Errorf("failed to open repo: %s", err)
 	}
 
+	var status git.Status
+	status, err = wt.Status()
+	if err != nil {
+		return err
+	}
+	if !status.IsClean() {
+		if config.GitResetOnChange {
+			return gitReset(wt)
+		}
+		return fmt.Errorf("there are uncommitted changes, cannot pull")
+	}
+
 	var publicKeys *ssh.PublicKeys
 	publicKeys, err = getPublicKeys(config)
 	if err != nil {
@@ -82,11 +115,12 @@ func gitUpdate(config *SyncerConfig) error {
 	}
 
 	pullOptions := &git.PullOptions{
-		RemoteName:   config.GitUpstream,
-		SingleBranch: true,
-		Depth:        1,
-		Auth:         publicKeys,
-		Progress:     os.Stdout,
+		RemoteName:    config.GitUpstream,
+		ReferenceName: plumbing.NewBranchReferenceName(config.GitBranch),
+		SingleBranch:  true,
+		Depth:         1,
+		Auth:          publicKeys,
+		Progress:      log.Writer(),
 	}
 	err = wt.Pull(pullOptions)
 	if err != nil && err.Error() != "already up-to-date" {
@@ -96,7 +130,15 @@ func gitUpdate(config *SyncerConfig) error {
 	return nil
 }
 
+func gitReset(wt *git.Worktree) error {
+	log.Printf("  Performing hard reset...")
+	return wt.Reset(&git.ResetOptions{
+		Mode: git.HardReset,
+	})
+}
+
 func checkGitConfigFile(config *SyncerConfig) error {
+	// TODO: Use go-git functions to do this check
 	gitConfigPath := path.Join(config.Dest, ".git", "config")
 	if _, err := os.Stat(gitConfigPath); errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("dest directory is not empty but does not contain a git clone")
@@ -135,8 +177,8 @@ func checkGitConfigFile(config *SyncerConfig) error {
 }
 
 func getPublicKeys(config *SyncerConfig) (*ssh.PublicKeys, error) {
-	if len(config.SshKeyPassword) > 0 {
-		publicKeys, err := ssh.NewPublicKeysFromFile("git", config.SshKeyFilename, config.SshKeyPassword)
+	if len(config.GitSshKeyPassword) > 0 {
+		publicKeys, err := ssh.NewPublicKeysFromFile("git", config.GitSshKeyFilename, config.GitSshKeyPassword)
 		if err != nil {
 			return nil, fmt.Errorf("generate publickeys failed: %s", err)
 		}
@@ -144,4 +186,3 @@ func getPublicKeys(config *SyncerConfig) (*ssh.PublicKeys, error) {
 	}
 	return nil, nil
 }
-

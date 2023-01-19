@@ -4,7 +4,9 @@ This project is designed to sit alongside a main task in a Nomad job group (for 
 
 It will clone a git repo into the destination and then update it according to the configured interval.
 
-It copes with the clone already existing, and will bail out if the directory is not empty but it's not an existing clone of the source.
+It copes with the clone already existing, and will bail out if the directory is not empty and it's not an existing clone
+of the configured source. When pulling it will check for changes and will perform a hard reset if changes exist. That
+can be disabled through the configuration (see below) in which case the process will exit if changes are present.
 
 ## Configuration
 
@@ -28,11 +30,24 @@ The update interval specified in [Go's time.Duration format](https://pkg.go.dev/
 
 Default: `"1h"`
 
+### `SYNCER_GIT_BRANCH`
+
+The name of the branch to clone.
+
+Default: `main`
+
 ### `SYNCER_GIT_UPSTREAM`
 
 The name of the upstream from which to pull.
 
 Default: `"origin"`
+
+### `SYNCER_GIT_RESET_ON_CHANGES`
+
+Whether to perform a hard reset if uncommitted changes exist in the repo when performing an update. The value should be
+`true`, `yes`, `on`, or `1`; all other values will be interpreted as `false`.
+
+Default: `true`
 
 ### `SYNCER_SSH_KEY_FILENAME`
 
