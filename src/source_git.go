@@ -68,7 +68,6 @@ func gitInit(config *SyncerConfig) error {
 		Auth:          publicKeys,
 		Progress:      log.Writer(),
 		SingleBranch:  true,
-		Depth:         1,
 		ReferenceName: plumbing.NewBranchReferenceName(config.GitBranch),
 	}
 	_, err = git.PlainClone(config.Dest, false, cloneOptions)
@@ -118,7 +117,6 @@ func gitUpdate(config *SyncerConfig) error {
 		RemoteName:    config.GitUpstream,
 		ReferenceName: plumbing.NewBranchReferenceName(config.GitBranch),
 		SingleBranch:  true,
-		Depth:         1,
 		Auth:          publicKeys,
 		Progress:      log.Writer(),
 	}

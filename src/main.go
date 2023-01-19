@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	VERSION = "v5"
+	VERSION = "v6"
 )
 
 func envString(name string, def string) string {
