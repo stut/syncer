@@ -1,14 +1,16 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"strings"
 	"time"
 )
 
 var (
-	VERSION = "v4"
+	VERSION = "v5"
 )
 
 func envString(name string, def string) string {
@@ -80,16 +82,28 @@ func main() {
 
 	log.Printf("Iniitalisation complete.")
 
-	updateTicker := time.NewTicker(config.UpdateInterval)
-	for {
-		select {
-		case <-updateTicker.C:
-			log.Printf("Updating...\n")
-			err = updateFunc(config)
-			if err != nil {
-				log.Fatalf("Error during update: %s\n", err)
+	go func() {
+		updateTicker := time.NewTicker(config.UpdateInterval)
+		for {
+			select {
+			case <-updateTicker.C:
+				log.Printf("Updating...\n")
+				err = updateFunc(config)
+				if err != nil {
+					log.Fatalf("Error during update: %s\n", err)
+				}
+				log.Printf("Update complete.")
 			}
-			log.Printf("Update complete.")
 		}
+	}()
+
+	listenPort := os.Getenv("NOMAD_PORT_http")
+	if len(listenPort) == 0 {
+		listenPort = "3000"
 	}
+
+	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
+		w.WriteHeader(204)
+	})
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", listenPort), nil))
 }
