@@ -177,12 +177,9 @@ func checkGitConfigFile(config *SyncerConfig) error {
 }
 
 func getPublicKeys(config *SyncerConfig) (*ssh.PublicKeys, error) {
-	if len(config.GitSshKeyPassword) > 0 {
-		publicKeys, err := ssh.NewPublicKeysFromFile("git", config.GitSshKeyFilename, config.GitSshKeyPassword)
-		if err != nil {
-			return nil, fmt.Errorf("generate publickeys failed: %s", err)
-		}
-		return publicKeys, nil
+	publicKeys, err := ssh.NewPublicKeysFromFile("git", config.GitSshKeyFilename, config.GitSshKeyPassword)
+	if err != nil {
+		return nil, fmt.Errorf("generate publickeys failed: %s", err)
 	}
-	return nil, nil
+	return publicKeys, nil
 }
