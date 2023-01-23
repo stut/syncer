@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	VERSION = "v6"
+	VERSION = "v7"
 )
 
 func envString(name string, def string) string {
@@ -102,7 +102,7 @@ func main() {
 		listenPort = "3000"
 	}
 
-	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
+	http.HandleFunc("/health", func(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(204)
 	})
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", listenPort), nil))

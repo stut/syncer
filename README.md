@@ -61,3 +61,7 @@ The SSH key password.
 
 Default: _not used_
 
+## Changelog
+
+* v7: Changed the health endpoint to `/health` instead of `/`.
+
