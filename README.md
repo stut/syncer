@@ -65,4 +65,5 @@ Default: _not used_
 
 * v7: Changed the health endpoint to `/health` instead of `/`.
 * v8: Added support for cloning a tag and https git source URLs.
+* v9: Modified Dockerfile to copy root certificates from the build container.
 
