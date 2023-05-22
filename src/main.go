@@ -10,9 +10,10 @@ import (
 )
 
 var (
-	VERSION = "v7"
+	VERSION = "v8"
 )
 
+// envString reads a string from the environment or returns the default if it's not present
 func envString(name string, def string) string {
 	val := os.Getenv(name)
 	if len(val) == 0 {
@@ -21,6 +22,7 @@ func envString(name string, def string) string {
 	return val
 }
 
+// envBool reads a boolean value from the environment or returns the default if it's not present. Valid truths: true, yes, on, 1.
 func envBool(name string, def bool) bool {
 	val := strings.ToLower(envString(name, ""))
 	if len(val) == 0 {
@@ -29,6 +31,7 @@ func envBool(name string, def bool) bool {
 	return val == "true" || val == "yes" || val == "on" || val == "1"
 }
 
+// initCommon performs initialisation common to all source types.
 func initCommon(config *SyncerConfig) error {
 	err := os.MkdirAll(config.Dest, os.ModePerm)
 	if err != nil {
@@ -71,7 +74,11 @@ func main() {
 	log.Printf("   Update interval = %s\n", config.UpdateInterval.String())
 	if config.Type == "git" {
 		log.Printf("      Git upstream = %s\n", config.GitUpstream)
-		log.Printf("        Git branch = %s\n", config.GitBranch)
+		if len(config.GitTag) > 0 {
+			log.Printf("           Git tag = %s\n", config.GitTag)
+		} else {
+			log.Printf("        Git branch = %s\n", config.GitBranch)
+		}
 		log.Printf("  SSH key filename = %s\n", config.GitSshKeyFilename)
 	}
 

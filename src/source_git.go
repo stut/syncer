@@ -15,25 +15,39 @@ import (
 	"github.com/mitchellh/go-homedir"
 )
 
+// gitConfig reads the git-specific configuration from the environment.
 func gitConfig(config *SyncerConfig) error {
 	var err error
 
 	config.GitBranch = envString("SYNCER_GIT_BRANCH", "main")
+	config.GitTag = envString("SYNCER_GIT_TAG", "")
 	config.GitUpstream = envString("SYNCER_GIT_UPSTREAM", "origin")
 	config.GitResetOnChange = envBool("SYNCER_GIT_RESET_ON_CHANGES", true)
-
-	config.GitSshKeyFilename, err = homedir.Expand(config.GitSshKeyFilename)
-	if err != nil {
-		return fmt.Errorf("cannot perform homedir expansion on the SSH key filename: %s", config.GitSshKeyFilename)
-	}
-	if _, err := os.Stat(config.GitSshKeyFilename); errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("SSH key filename does not exist: %s", config.GitSshKeyFilename)
-	}
+	config.GitSshKeyFilename = envString("SYNCER_SSH_KEY_FILENAME", "")
 	config.GitSshKeyPassword = envString("SYNCER_SSH_KEY_PASSWORD", "")
+
+	if len(config.GitSshKeyFilename) > 0 {
+		config.GitSshKeyFilename, err = homedir.Expand(config.GitSshKeyFilename)
+		if err != nil {
+			return fmt.Errorf("cannot perform homedir expansion on the SSH key filename: %s", config.GitSshKeyFilename)
+		}
+		if _, err := os.Stat(config.GitSshKeyFilename); errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("SSH key filename does not exist: %s", config.GitSshKeyFilename)
+		}
+	}
 
 	return nil
 }
 
+// getReferenceName creates a reference name for the tag or branch in the configuration.
+func getReferenceName(config *SyncerConfig) plumbing.ReferenceName {
+	if len(config.GitTag) > 0 {
+		return plumbing.NewTagReferenceName(config.GitTag)
+	}
+	return plumbing.NewBranchReferenceName(config.GitBranch)
+}
+
+// gitInit performs the initial clone of a git source.
 func gitInit(config *SyncerConfig) error {
 	var err error
 
@@ -65,10 +79,12 @@ func gitInit(config *SyncerConfig) error {
 	log.Printf("Performing initial clone...")
 	cloneOptions := &git.CloneOptions{
 		URL:           config.Source,
-		Auth:          publicKeys,
 		Progress:      log.Writer(),
 		SingleBranch:  true,
-		ReferenceName: plumbing.NewBranchReferenceName(config.GitBranch),
+		ReferenceName: getReferenceName(config),
+	}
+	if publicKeys != nil {
+		cloneOptions.Auth = publicKeys
 	}
 	_, err = git.PlainClone(config.Dest, false, cloneOptions)
 	if err != nil {
@@ -78,6 +94,7 @@ func gitInit(config *SyncerConfig) error {
 	return nil
 }
 
+// gitUpdate performs an update (pull) for a git source.
 func gitUpdate(config *SyncerConfig) error {
 	// We instantiate a new repository targeting the given path (the .git folder)
 	r, err := git.PlainOpen(config.Dest)
@@ -115,10 +132,12 @@ func gitUpdate(config *SyncerConfig) error {
 
 	pullOptions := &git.PullOptions{
 		RemoteName:    config.GitUpstream,
-		ReferenceName: plumbing.NewBranchReferenceName(config.GitBranch),
 		SingleBranch:  true,
-		Auth:          publicKeys,
+		ReferenceName: getReferenceName(config),
 		Progress:      log.Writer(),
+	}
+	if publicKeys != nil {
+		pullOptions.Auth = publicKeys
 	}
 	err = wt.Pull(pullOptions)
 	if err != nil && err.Error() != "already up-to-date" {
@@ -128,6 +147,7 @@ func gitUpdate(config *SyncerConfig) error {
 	return nil
 }
 
+// gitReset resets a git clone.
 func gitReset(wt *git.Worktree) error {
 	log.Printf("  Performing hard reset...")
 	return wt.Reset(&git.ResetOptions{
@@ -135,6 +155,7 @@ func gitReset(wt *git.Worktree) error {
 	})
 }
 
+// checkGitConfigFile checks an initial git clone to make sure it matches the configuration.
 func checkGitConfigFile(config *SyncerConfig) error {
 	// TODO: Use go-git functions to do this check
 	gitConfigPath := path.Join(config.Dest, ".git", "config")
@@ -174,7 +195,12 @@ func checkGitConfigFile(config *SyncerConfig) error {
 	return fmt.Errorf("dest dir contains a git clone but the source doesn't match")
 }
 
+// getPublicKeys reads the public keys from the private key file in the configuration.
 func getPublicKeys(config *SyncerConfig) (*ssh.PublicKeys, error) {
+	if len(config.GitSshKeyFilename) == 0 {
+		return nil, nil
+	}
+
 	publicKeys, err := ssh.NewPublicKeysFromFile("git", config.GitSshKeyFilename, config.GitSshKeyPassword)
 	if err != nil {
 		return nil, fmt.Errorf("generate publickeys failed: %s", err)

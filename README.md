@@ -14,7 +14,7 @@ All configuration is done using environment variables.
 
 ### `SYNCER_SOURCE`
 
-The `git@` URL of the repo to clone.
+The `git@` or `https://` URL of the repo to clone.
 
 Default: _none, must be specified_
 
@@ -30,9 +30,9 @@ The update interval specified in [Go's time.Duration format](https://pkg.go.dev/
 
 Default: `"1h"`
 
-### `SYNCER_GIT_BRANCH`
+### `SYNCER_GIT_BRANCH` or `SYNCER_GIT_TAG`
 
-The name of the branch to clone.
+The name of the branch or tag to clone. If both are specified the tag will be cloned.
 
 Default: `main`
 
@@ -51,17 +51,18 @@ Default: `true`
 
 ### `SYNCER_SSH_KEY_FILENAME`
 
-Private SSH key to use when accessing the remote git repository.
+Optional private SSH key to use when accessing the remote git repository.
 
 Default: _not used_
 
 ### `SYNCER_SSH_KEY_PASSWORD`
 
-The SSH key password.
+Optional SSH key password.
 
 Default: _not used_
 
 ## Changelog
 
 * v7: Changed the health endpoint to `/health` instead of `/`.
+* v8: Added support for cloning a tag and https git source URLs.
 

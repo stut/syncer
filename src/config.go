@@ -14,12 +14,14 @@ type SyncerConfig struct {
 
 	// Git
 	GitBranch         string
+	GitTag            string
 	GitUpstream       string
 	GitResetOnChange  bool
 	GitSshKeyFilename string
 	GitSshKeyPassword string
 }
 
+// initSyncerConfig initialise the configuration from the environment.
 func initSyncerConfig() (*SyncerConfig, error) {
 	var err error
 
@@ -29,11 +31,10 @@ func initSyncerConfig() (*SyncerConfig, error) {
 	}
 
 	res := &SyncerConfig{
-		Type:              determineSourceType(source),
-		Source:            source,
-		Dest:              envString("SYNCER_DEST", ""),
-		UpdateInterval:    0,
-		GitSshKeyFilename: envString("SYNCER_SSH_KEY_FILENAME", ""),
+		Type:           determineSourceType(source),
+		Source:         source,
+		Dest:           envString("SYNCER_DEST", ""),
+		UpdateInterval: 0,
 	}
 
 	if len(res.Dest) == 0 {
@@ -48,9 +49,15 @@ func initSyncerConfig() (*SyncerConfig, error) {
 	return res, nil
 }
 
+// determineSourceType works out the source type from the source URL.
 func determineSourceType(source string) string {
 	if strings.HasPrefix(source, "git@") {
 		return "git"
 	}
+
+	if strings.HasPrefix(source, "https://") && strings.HasSuffix(source, ".git") {
+		return "git"
+	}
+
 	return "unsupported"
 }

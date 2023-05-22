@@ -5,6 +5,7 @@ import (
 	"os"
 )
 
+// dirIsEmpty
 func dirIsEmpty(path string) (bool, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -18,4 +19,3 @@ func dirIsEmpty(path string) (bool, error) {
 	}
 	return false, err
 }
-
