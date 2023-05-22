@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	VERSION = "v9"
+	VERSION = "v10"
 )
 
 // envString reads a string from the environment or returns the default if it's not present

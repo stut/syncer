@@ -1,4 +1,4 @@
-FROM golang:1.18.0-alpine3.15 AS build
+FROM golang:1.20.4-alpine3.18 AS build
 
 RUN apk update && apk add openssh
 
