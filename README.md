@@ -8,6 +8,10 @@ It copes with the clone already existing, and will bail out if the directory is 
 of the configured source. When pulling it will check for changes and will perform a hard reset if changes exist. That
 can be disabled through the configuration (see below) in which case the process will exit if changes are present.
 
+## Force update
+
+Send a `GET` request to `/update` to force an update. This can be used in CI jobs to pick up changes immediately.
+
 ## Configuration
 
 All configuration is done using environment variables.
@@ -67,3 +71,4 @@ Default: _not used_
 * v8: Added support for cloning a tag and https git source URLs.
 * v9: Modified Dockerfile to copy root certificates from the build container.
 * v10: Bumped Dockerfile to go 1.20.4.
+* v11: Added /update endpoint to force an update.

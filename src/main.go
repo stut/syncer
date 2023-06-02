@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	VERSION = "v10"
+	VERSION = "v11"
 )
 
 // envString reads a string from the environment or returns the default if it's not present
@@ -38,6 +38,15 @@ func initCommon(config *SyncerConfig) error {
 		return err
 	}
 	return nil
+}
+
+func doUpdate(updateFunc func(syncerConfig *SyncerConfig) error, config *SyncerConfig) {
+	log.Printf("Updating...\n")
+	err := updateFunc(config)
+	if err != nil {
+		log.Fatalf("Error during update: %s\n", err)
+	}
+	log.Printf("Update complete.")
 }
 
 func main() {
@@ -89,17 +98,15 @@ func main() {
 
 	log.Printf("Iniitalisation complete.")
 
+	forceUpdateChan := make(chan bool, 1)
+	updateTicker := time.NewTicker(config.UpdateInterval)
 	go func() {
-		updateTicker := time.NewTicker(config.UpdateInterval)
 		for {
 			select {
 			case <-updateTicker.C:
-				log.Printf("Updating...\n")
-				err = updateFunc(config)
-				if err != nil {
-					log.Fatalf("Error during update: %s\n", err)
-				}
-				log.Printf("Update complete.")
+				doUpdate(updateFunc, config)
+			case <-forceUpdateChan:
+				doUpdate(updateFunc, config)
 			}
 		}
 	}()
@@ -109,6 +116,10 @@ func main() {
 		listenPort = "3000"
 	}
 
+	http.HandleFunc("/update", func(w http.ResponseWriter, req *http.Request) {
+		forceUpdateChan <- true
+		w.WriteHeader(http.StatusAccepted)
+	})
 	http.HandleFunc("/health", func(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(204)
 	})
